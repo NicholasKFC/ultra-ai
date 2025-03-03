@@ -10,6 +10,7 @@ from weaviate.classes.init import Auth
 
 from Tools_Agents.product import product_call
 from Tools_Agents.domain import domain_call
+from Tools_Agents.domain_ask_demo import domain_ask_demo_call
 from Response_Agents.large_context_agent import large_context_call
 
 # Load environment variables
@@ -27,6 +28,16 @@ client = weaviate.connect_to_weaviate_cloud(
     auth_credentials=Auth.api_key(WEAVIATE_API_KEY),  # Replace with your Weaviate Cloud key
     headers={'X-OpenAI-Api-key': OPENAI_API_KEY}  # Replace with your OpenAI API key
 )
+
+# demo_client = weaviate.connect_to_custom(
+#     http_host="52.220.0.151",
+#     http_port=8080,
+#     http_secure=False,
+#     grpc_host="52.220.0.151",
+#     grpc_port=50051,
+#     grpc_secure=False,
+#     headers={'X-OpenAI-Api-key': OPENAI_API_KEY, 'X-API-KEY': '4950cef6afb7448b8bf5bd9e8355e1d8'}
+# )
 
 # Initialize Flask app
 app = Flask(__name__)
@@ -53,6 +64,17 @@ def post_domain():
     except Exception as e:
         return jsonify({"error": "An error occurred", "details": str(e)}), 500
     
+@app.route('/chat/domain_ask_demo', methods=['POST'])
+def post_domain_ask_demo():
+    try:
+        data = request.get_json()
+        response = domain_ask_demo_call(data)
+        return response
+    except ValidationError as e:
+        return jsonify({"error": "Invalid input", "details": e.errors()}), 400
+    except Exception as e:
+        return jsonify({"error": "An error occurred", "details": str(e)}), 500
+    
 @app.route('/chat/large_context', methods=['POST'])
 def post_response():
     try:
@@ -70,4 +92,5 @@ if __name__ == '__main__':
         app.run(host='0.0.0.0', debug=True)
     finally:
         client.close()
+        #demo_client.close()
         print("Weaviate client connection closed.")
