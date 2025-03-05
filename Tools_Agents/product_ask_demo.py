@@ -26,7 +26,7 @@ def product_ask_demo_call(data):
     # Define LLM and retriever
     llm = ChatGoogleGenerativeAI(model="gemini-2.0-flash")
     embeddings = OpenAIEmbeddings(openai_api_key=OPENAI_API_KEY, model="text-embedding-3-small")
-    vectorstore = WeaviateVectorStore(client, "Product_KB", "title", embeddings)
+    vectorstore = WeaviateVectorStore(client, "Product_ASKedu", "content", embeddings)
     retriever = vectorstore.as_retriever()
     
     query = data['query']
