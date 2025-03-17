@@ -11,6 +11,7 @@ from weaviate.classes.init import Auth
 from Tools_Agents.product import product_call
 from Tools_Agents.domain import domain_call
 from Tools_Agents.product_ask_demo import product_ask_demo_call
+from Tools_Agents.domain_gp_demo import domain_gp_demo_call
 from Tools_Agents.domain_ask_demo import domain_ask_demo_call
 from Response_Agents.large_context_agent import large_context_call
 from Response_Agents.no_context_agent import no_context_call
@@ -72,6 +73,17 @@ def post_product_ask_demo():
     try:
         data = request.get_json()
         response = product_ask_demo_call(data)
+        return response
+    except ValidationError as e:
+        return jsonify({"error": "Invalid input", "details": e.errors()}), 400
+    except Exception as e:
+        return jsonify({"error": "An error occurred", "details": str(e)}), 500
+    
+@app.route('/chat/domain_gp_demo', methods=['POST'])
+def post_domain_gp_demo():
+    try:
+        data = request.get_json()
+        response = domain_gp_demo_call(data)
         return response
     except ValidationError as e:
         return jsonify({"error": "Invalid input", "details": e.errors()}), 400
