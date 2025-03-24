@@ -9,6 +9,7 @@ from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.runnables import RunnablePassthrough
+from langchain_core.tools import tool
 
 # Load environment variables
 script_dir = Path(__file__).resolve().parent
@@ -66,3 +67,8 @@ def domain_call(data):
     response_message = rag_chain.invoke(query)
     response_json = {'output': response_message}
     return response_json
+
+@tool
+def domain_tool(query: str) -> dict[str, str]:
+    """This tool retrieves information about the company, its policies (e.g., return policy, shipping policy), general information about the industry, company values, and contact information. Use this tool when the user is asking about shipping, returns, company information, privacy, or other general policies and industry-related knowledge. The response from this tool is context about the company in text."""
+    return domain_call({"query": query})

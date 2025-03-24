@@ -9,6 +9,7 @@ from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.runnables import RunnablePassthrough
+from langchain_core.tools import tool
 
 # Load environment variables
 script_dir = Path(__file__).resolve().parent
@@ -82,3 +83,8 @@ def product_call(data):
     response_message = rag_chain.invoke(query)
     response_json = {'output': response_message}
     return response_json
+
+@tool
+def product_tool(query: str) -> dict[str, str]:
+    """This tool retrieves detailed information about specific products, including their features, price, availability, specifications, and customer reviews. Use this tool when the user is asking about a specific product, a category of products, comparing products, or needs product recommendations. The response from this tool is product details in text."""
+    return product_call({"query": query})

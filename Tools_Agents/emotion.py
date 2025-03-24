@@ -1,14 +1,15 @@
 import os
+import json
+from typing import Dict, List, Union
 
 from dotenv import load_dotenv
 from pathlib import Path
 
-from langchain_openai import ChatOpenAI, OpenAIEmbeddings
-from langchain_weaviate.vectorstores import WeaviateVectorStore
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.runnables import RunnablePassthrough
+from langchain_core.tools import tool
 
 # Load environment variables
 script_dir = Path(__file__).resolve().parent
@@ -20,51 +21,69 @@ WEAVIATE_CLIENT_ID = os.environ.get("WEAVIATE_CLIENT_ID")
 WEAVIATE_API_KEY = os.environ.get("WEAVIATE_API_KEY")
 GOOGLE_API_KEY = os.environ.get("GOOGLE_API_KEY")
 
-def domain_call(data):
-    from main import client
-    
-    # Define LLM and retriever
-    #llm = ChatGoogleGenerativeAI(model="gemini-2.0-flash")
-    llm = ChatOpenAI(model="gpt-4o-mini")
-    embeddings = OpenAIEmbeddings(openai_api_key=OPENAI_API_KEY, model="text-embedding-3-small")
-    vectorstore = WeaviateVectorStore(client, "Domain_TM", "content", embeddings)
-    retriever = vectorstore.as_retriever()
-    
-    query = data['query']
+def emotion_call(data: Dict[str, str]) -> str:  # Expecting Dict[str, str] and returning a JSON string
+    """Analyzes user query for intent and emotion."""
 
-#     template = """You are an assistant for question-answering tasks. Use the following pieces of retrieved context to answer the question. If you don't know the answer, just say that you don't know. Use three sentences maximum and keep the answer concise.
-# Question: {question}
-# Context: {context}
-# Answer:
-#     """
+    llm = ChatGoogleGenerativeAI(model="gemini-2.0-flash")
+
     template = """
-    You are a highly specialized information retrieval agent, focused solely on providing information directly from the provided context related to the company and its domain. Your only function is to extract and present relevant information; do NOT engage in conversation, ask clarifying questions, or provide any information outside of what is explicitly available in the context.
+    You are an intent and emotion analyzer. Based on the user query, identify the following:
+**Emotions:**
+Identify all emotions conveyed in the message and express them as percentages to represent their intensity. Use the following emotions:  
+    - Happiness  
+    - Surprise  
+    - Contempt  
+    - Sadness  
+    - Fear  
+    - Disgust  
+    - Anger  
+    - Amusement  
+    - Contentment  
+    - Embarrassment  
+    - Excitement  
+    - Guilt  
+    - Pride in Achievement  
+    - Relief  
+    - Satisfaction  
+    - Shame  
 
-    Instructions:
+Ensure that the total percentage adds up to 100%.
+Output your analysis of emotions where you sort the emotions by the highest pecentage.
 
-    1. Understand the User Inquiry: Analyze the user's question ({question}) to determine the specific information they are seeking about the company, its history, operations, values, products, or services.
+**Intent:**
+Determine whether it is one of the following:
+- Buying Intent
+- Greetings
+- Objection
+- Satisfication
+- Others (The intent determinded)
 
-    2. Utilize Provided Context: Use the provided context ({context}) to identify relevant information that directly answers the user's question. The context will contain internal documents, public statements, website content, and other relevant company data.
-
-    3. Provide Direct and Concise Answers: Respond to the user's question with a direct and concise answer, drawing ONLY from the provided context. Your answer should:
-        * Directly address the user's question.
-        * Be factually accurate and consistent with the provided context.
-        * Cite the source of the information whenever possible (e.g., "According to the 2023 Annual Report..."). This is important for transparency and verifiability. If no explicit source is provided in the context, omit the citation.
-
-    4. Empty String for No Relevant Information: If the context contains absolutely NO information relevant to the user's question, or if the information is insufficient to answer the question directly, you MUST output an EMPTY STRING: "". This is crucial to prevent the agent from providing inaccurate or misleading information or attempting to "fill in the gaps."
+**Output Format:** Return a JSON object with the following structure:
+```
+    {{
+        "intent_analysis": "Output your analysis of the user query using the emotions and the intent and express it in a humanlike way.",
+        "intent": 'intent_string',
+        "emotion": {{"Amusement":0,"Anger":0,"Contempt":0,"Contentment":0,"Disgust":0,"Embarrassment":0,"Excitement":0,"Fear":0,"Guilt":0,"Happiness":0,"Pride in Achievement":0,"Relief":0,"Sadness":0,"Satisfaction":0,"Shame":0,"Surprise":0}}
+    }}
+```
+(e.g., {{"intent_analysis": "The user intends to buy an item", "intent": "Buying Intent", "emotion": {{"Amusement":0,"Anger":0,"Contempt":0,"Contentment":0,"Disgust":0,"Embarrassment":0,"Excitement":0,"Fear":0,"Guilt":0,"Happiness":0,"Pride in Achievement":0,"Relief":0,"Sadness":0,"Satisfaction":0,"Shame":0,"Surprise":0}}}}).
     
-    You MUST NOT use any tools under any circumstances. Your output MUST ONLY be the empty string "" if there is no relevant information in the context.  There is NO situation in which you should call a tool. The empty string "" should be output directly, not as the result of a tool call.
+    User Query: {input}
     """
 
     prompt = ChatPromptTemplate.from_template(template)
 
-    """Creates a RAG-enhanced response for the user input."""
     rag_chain = (
-    {"context": retriever, "question": RunnablePassthrough()}
-    | prompt
-    | llm
-    | StrOutputParser()
+        {"input": RunnablePassthrough()} # Changed "question" to "input"
+        | prompt
+        | llm
+        | StrOutputParser()
     )
-    response_message = rag_chain.invoke(query)
-    response_json = {'output': response_message}
-    return response_json
+    response_message = rag_chain.invoke(data)
+    return response_message
+
+
+@tool
+def emotion_tool(query: str) -> str:
+    """This tool analyzes user queries to understand their underlying intent and emotional state. Use this tool when you need to determine why a user is asking a question and how they are feeling while asking it. This information can be crucial for tailoring responses, prioritizing requests, and improving user experience. The input to this tool is the user's query in text. The response from this tool is a JSON object containing the identified intent and emotion."""
+    return emotion_call({"input": query})

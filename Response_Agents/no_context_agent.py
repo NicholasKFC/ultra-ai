@@ -5,9 +5,7 @@ from dotenv import load_dotenv
 from pathlib import Path
 from pydantic import BaseModel
 
-from langchain_community.document_loaders import PyPDFLoader, TextLoader, Docx2txtLoader, UnstructuredMarkdownLoader
 from langchain_google_genai import ChatGoogleGenerativeAI
-from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 # Load environment variables
 script_dir = Path(__file__).resolve().parent
@@ -22,8 +20,8 @@ class UserInput(BaseModel):
     user_query: str
     intent: str
     emotion: dict
-    product_info: str = ""  # Optional field
-    domain_info: str = ""   # Optional field
+    product_info: str | None = ""  # Optional field
+    domain_info: str | None = ""   # Optional field
     irrelevant_query: bool = False  
     clarification_needed: bool = False
 

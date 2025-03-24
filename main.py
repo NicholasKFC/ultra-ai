@@ -8,6 +8,7 @@ from flask import Flask, request, jsonify
 from pydantic import ValidationError
 from weaviate.classes.init import Auth
 
+from Orchestrator_Agent.orchestrator import orchestrator_call
 from Tools_Agents.product import product_call
 from Tools_Agents.domain import domain_call
 from Tools_Agents.product_ask_demo import product_ask_demo_call
@@ -15,6 +16,7 @@ from Tools_Agents.domain_gp_demo import domain_gp_demo_call
 from Tools_Agents.domain_ask_demo import domain_ask_demo_call
 from Response_Agents.large_context_agent import large_context_call
 from Response_Agents.no_context_agent import no_context_call
+from chatbot import chat_call
 
 # Load environment variables
 script_dir = Path(__file__).resolve().parent
@@ -45,6 +47,28 @@ client = weaviate.connect_to_weaviate_cloud(
 
 # Initialize Flask app
 app = Flask(__name__)
+
+@app.route('/chat', methods=['POST'])
+def post_chat():
+    try:
+        data = request.get_json()
+        response = chat_call(data)
+        return response
+    except ValidationError as e:
+        return jsonify({"error": "Invalid input", "details": e.errors()}), 400
+    except Exception as e:
+        return jsonify({"error": "An error occurred", "details": str(e)}), 500
+
+@app.route('/chat/orchestrator', methods=['POST'])
+def post_orchestrator():
+    try:
+        data = request.get_json()
+        response = orchestrator_call(data)
+        return response
+    except ValidationError as e:
+        return jsonify({"error": "Invalid input", "details": e.errors()}), 400
+    except Exception as e:
+        return jsonify({"error": "An error occurred", "details": str(e)}), 500
 
 @app.route('/chat/product', methods=['POST'])
 def post_product():
