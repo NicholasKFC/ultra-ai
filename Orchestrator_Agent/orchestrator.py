@@ -64,12 +64,18 @@ def orchestrator_call(data, chat_history):
 
 *   **Product Knowledge Tool:**
     *   **Description:** Retrieves detailed information and recommendations for products, including their features, price, benefits, customer reviews, and suitability for different needs. Can also generate recommendations for a category.
-    *   **Input:** A natural language query related to a specific product or category. *If the user is continuing a conversation about a product, the input should include the product or category they were previously discussing.*
+    *   **Input:** 
+        - query(str): A natural language query related to a specific product or category. *If the user is continuing a conversation about a product, the input should include the product or category they were previously discussing. * 
+        - product_kb_name(str): The name of the product knowledge base.
+        - product_kb_column_name(str): The column name in the product knowledge base.
     *   **Output:** Product details and recommendations in text format.  *(Important: The *exact* output from this tool should populate the `product_info` field when used.)* Example: "The Pro X laptop boasts a powerful Intel i7 processor, 16GB of RAM, a stunning 14-inch display, and a long-lasting battery. Customer reviews are generally positive."
 
 *   **Domain Knowledge Tool:**
     *   **Description:** Retrieves information about the company, its policies (e.g., return policy, shipping policy), industry knowledge, and a list of product categories.
-    *   **Input:** A natural language query related to company policies, information, industry knowledge, OR a request for a list of product categories.
+    *   **Input:** 
+        - query(str): A natural language query related to company policies, information, industry knowledge, OR a request for a list of product categories.
+        - domain_kb_name(str): The name of the domain knowledge base.
+        - domain_kb_column_name(str): The column name in the domain knowledge base.
     *   **Output:** Product context in text format, including a list of product categories.  *(Important: The *exact* output from this tool should populate the `domain_info` field when used.)* Example: "Our product categories include: Laptops, Smartphones, Headphones, and Accessories. Our shipping policy is..."
 
 **Instructions:**
@@ -321,6 +327,10 @@ def orchestrator_call(data, chat_history):
     }
     ```
 """
+    domain_kb_name = data['domain_kb_name']
+    domain_kb_column_name = data['domain_kb_column_name']
+    product_kb_name = data['product_kb_name']
+    product_kb_column_name = data['product_kb_column_name']
     query = data['query']
     tools = [product_tool, domain_tool, emotion_tool]
     model = ChatOpenAI(model="gpt-4o-mini", temperature=0)
@@ -328,7 +338,7 @@ def orchestrator_call(data, chat_history):
     
     prompt = ChatPromptTemplate.from_messages([
 		SystemMessage(content=system_prompt),
-    MessagesPlaceholder(variable_name="chat_history"),
+        MessagesPlaceholder(variable_name="chat_history"),
 		("user", "{input}"),
 		MessagesPlaceholder(variable_name="agent_scratchpad"),
 	])
@@ -336,7 +346,18 @@ def orchestrator_call(data, chat_history):
     agent = create_openai_tools_agent(model, tools, prompt)
     #agent = create_react_agent(model, tools, prompt=prompt)
     agent_executor = AgentExecutor(agent=agent, tools=tools, verbose=True)
-    agent_output = agent_executor.invoke({"input": query, "chat_history": chat_history})
+    
+    inputs = {
+        "input": {
+            "query": query, 
+            "domain_kb_name": domain_kb_name, 
+            "domain_kb_column_name": domain_kb_column_name,
+            "product_kb_name": product_kb_name, 
+            "product_kb_column_name": product_kb_column_name,
+        },
+        "chat_history": chat_history, 
+    }
+    agent_output = agent_executor.invoke(inputs)
     #print(f"Agent Output: {agent_output}")
     try:
         output_str = agent_output['output']

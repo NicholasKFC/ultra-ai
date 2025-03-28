@@ -21,21 +21,16 @@ WEAVIATE_CLIENT_ID = os.environ.get("WEAVIATE_CLIENT_ID")
 WEAVIATE_API_KEY = os.environ.get("WEAVIATE_API_KEY")
 GOOGLE_API_KEY = os.environ.get("GOOGLE_API_KEY")
 
-def product_call(data):
+def product_tm_demo_call(data):
     from main import client
-    
-    query = data['query']
-    product_kb_name = data['product_kb_name']
-    product_kb_column_name = data['product_kb_column_name']
-    
-    if product_kb_name == None or product_kb_column_name == None:
-        return {'error': 'Please provide the knowledge base name and column name.'}
     
     # Define LLM and retriever
     llm = ChatGoogleGenerativeAI(model="gemini-2.0-flash")
     embeddings = OpenAIEmbeddings(openai_api_key=OPENAI_API_KEY, model="text-embedding-3-small")
-    vectorstore = WeaviateVectorStore(client, product_kb_name, product_kb_column_name, embeddings)
+    vectorstore = WeaviateVectorStore(client, "Product_KB", "title", embeddings)
     retriever = vectorstore.as_retriever()
+    
+    query = data['query']
 
     template = """You are a helpful product recommendation agent. Your primary goal is to provide users with relevant product recommendations based on their query, including crucial product details with an emphasis on the URL and image. If no products match, return null.
 
@@ -88,8 +83,3 @@ def product_call(data):
     response_message = rag_chain.invoke(query)
     response_json = {'output': response_message}
     return response_json
-
-@tool
-def product_tool(query: str, product_kb_name: str, product_kb_column_name: str) -> dict[str, str]:
-    """This tool retrieves detailed information about specific products, including their features, price, availability, specifications, and customer reviews. Use this tool when the user is asking about a specific product, a category of products, comparing products, or needs product recommendations. The response from this tool is product details in text."""
-    return product_call({"query": query, "product_kb_name": product_kb_name, "product_kb_column_name": product_kb_column_name})

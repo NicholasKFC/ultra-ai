@@ -21,22 +21,17 @@ WEAVIATE_CLIENT_ID = os.environ.get("WEAVIATE_CLIENT_ID")
 WEAVIATE_API_KEY = os.environ.get("WEAVIATE_API_KEY")
 GOOGLE_API_KEY = os.environ.get("GOOGLE_API_KEY")
 
-def domain_call(data):
+def domain_tm_demo_call(data):
     from main import client
-    
-    query = data['query']
-    domain_kb_name = data['domain_kb_name']
-    domain_kb_column_name = data['domain_kb_column_name']
-    
-    if domain_kb_name == None or domain_kb_column_name == None:
-        return {'error': 'Please provide the knowledge base name and column name.'}
     
     # Define LLM and retriever
     #llm = ChatGoogleGenerativeAI(model="gemini-2.0-flash")
     llm = ChatOpenAI(model="gpt-4o-mini")
     embeddings = OpenAIEmbeddings(openai_api_key=OPENAI_API_KEY, model="text-embedding-3-small")
-    vectorstore = WeaviateVectorStore(client, domain_kb_name, domain_kb_column_name, embeddings)
+    vectorstore = WeaviateVectorStore(client, "Domain_TM", "content", embeddings)
     retriever = vectorstore.as_retriever()
+    
+    query = data['query']
 
 #     template = """You are an assistant for question-answering tasks. Use the following pieces of retrieved context to answer the question. If you don't know the answer, just say that you don't know. Use three sentences maximum and keep the answer concise.
 # Question: {question}
@@ -72,8 +67,3 @@ def domain_call(data):
     response_message = rag_chain.invoke(query)
     response_json = {'output': response_message}
     return response_json
-
-@tool
-def domain_tool(query: str, domain_kb_name: str, domain_kb_column_name: str) -> dict[str, str]:
-    """This tool retrieves information about the company, its policies (e.g., return policy, shipping policy), general information about the industry, company values, and contact information. Use this tool when the user is asking about shipping, returns, company information, privacy, or other general policies and industry-related knowledge. The response from this tool is context about the company in text."""
-    return domain_call({"query": query, "domain_kb_name": domain_kb_name, "domain_kb_column_name": domain_kb_column_name})
